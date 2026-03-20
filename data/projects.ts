@@ -1,0 +1,38 @@
+export const projects = [
+  {
+    id: 1,
+    title: "DevConnect",
+    description: "A real-time developer collaboration platform with live code editor and video chat.",
+    tags: ["Next.js", "Socket.io", "PostgreSQL", "WebRTC"],
+    github: "https://github.com",
+    live: "https://example.com",
+    color: "#ff9f0a",
+  },
+  {
+    id: 2,
+    title: "PixelStore",
+    description: "Full-stack e-commerce app with Stripe payments, inventory management and admin dashboard.",
+    tags: ["React", "Node.js", "Stripe", "MongoDB"],
+    github: "https://github.com",
+    live: "https://example.com",
+    color: "#ff9f0a",
+  },
+  {
+    id: 3,
+    title: "AuraAI",
+    description: "AI-powered mood tracker that analyzes journal entries and visualizes emotional patterns.",
+    tags: ["Python", "FastAPI", "OpenAI", "React"],
+    github: "https://github.com",
+    live: "https://example.com",
+    color: "#ff9f0a",
+  },
+  {
+    id: 4,
+    title: "CodeVault",
+    description: "A personal snippet manager with syntax highlighting, tagging and search.",
+    tags: ["Next.js", "Prisma", "SQLite", "Tailwind"],
+    github: "https://github.com",
+    live: "https://example.com",
+    color: "#ff9f0a",
+  },
+];
