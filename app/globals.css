@@ -1,14 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --font-space-grotesk: 'Space Grotesk', sans-serif;
-  --font-press-start: 'Press Start 2P', monospace;
-  --font-space-mono: 'Space Mono', monospace;
-}
 
 * {
   margin: 0;
@@ -23,17 +15,14 @@ html {
 body {
   background-color: #1c1c1e;
   color: #f2f2f7;
-  font-family: var(--font-space-grotesk);
   overflow-x: hidden;
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #1c1c1e; }
 ::-webkit-scrollbar-thumb { background: #ff9f0a; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #ffb340; }
 
-/* Text stroke utility */
 .text-stroke {
   -webkit-text-stroke: 2px #ff9f0a;
   color: transparent;
@@ -44,7 +33,6 @@ body {
   color: transparent;
 }
 
-/* Scanline effect */
 .scanlines::after {
   content: '';
   position: absolute;
@@ -60,11 +48,42 @@ body {
   z-index: 1;
 }
 
-/* Orange glow */
 .glow-orange {
   box-shadow: 0 0 20px rgba(255, 159, 10, 0.3);
 }
 
 .glow-orange-sm {
   box-shadow: 0 0 10px rgba(255, 159, 10, 0.2);
+}
+
+spline-viewer {
+  background: transparent !important;
+}
+
+spline-viewer::part(logo) {
+  display: none !important;
+}
+
+#spline-watermark,
+[class*="spline-watermark"],
+canvas + div a {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Kill Spline watermark every possible way */
+a[href*="spline.design"],
+[class*="spline-watermark"],
+[id*="spline-watermark"],
+[class*="SplineLogo"],
+[class*="spline-logo"],
+canvas ~ div > a,
+canvas + div a {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }

@@ -3,101 +3,130 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { gsap } from "gsap";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
 import FloatingDevice from "./FloatingDevice";
 
 export default function Hero() {
   const headlineRef = useRef<HTMLDivElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
-  const ctaRef = useRef<HTMLDivElement>(null);
-  const badgeRef = useRef<HTMLDivElement>(null);
+  const ctaRef      = useRef<HTMLDivElement>(null);
+  const statsRef    = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
       tl.fromTo(
-        badgeRef.current,
-        { opacity: 0, y: -20 },
-        { opacity: 1, y: 0, duration: 0.6 }
-      )
-      .fromTo(
         headlineRef.current?.querySelectorAll(".word") ?? [],
-        { opacity: 0, y: 60, skewY: 4 },
-        { opacity: 1, y: 0, skewY: 0, duration: 0.8, stagger: 0.12 },
-        "-=0.2"
+        { opacity: 0, y: 80, skewY: 6 },
+        { opacity: 1, y: 0, skewY: 0, duration: 0.9, stagger: 0.1 }
       )
       .fromTo(
         subtitleRef.current,
-        { opacity: 0, y: 20 },
+        { opacity: 0, y: 24 },
         { opacity: 1, y: 0, duration: 0.7 },
-        "-=0.3"
+        "-=0.4"
       )
       .fromTo(
         ctaRef.current?.querySelectorAll("button, a") ?? [],
         { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.6, stagger: 0.1 },
+        { opacity: 1, y: 0, duration: 0.6, stagger: 0.12 },
         "-=0.4"
+      )
+      .fromTo(
+        statsRef.current?.querySelectorAll(".stat-item") ?? [],
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1 },
+        "-=0.3"
       );
     });
 
     return () => ctx.revert();
   }, []);
 
+  const scrollTo = (id: string) =>
+    document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center overflow-hidden scanlines"
+      className="relative min-h-screen flex items-center overflow-hidden"
     >
-      {/* Background grid */}
+      {/* Subtle dot grid background */}
       <div
-        className="absolute inset-0 opacity-[0.04]"
+        className="absolute inset-0 opacity-[0.035]"
         style={{
           backgroundImage:
-            "linear-gradient(#ff9f0a 1px, transparent 1px), linear-gradient(90deg, #ff9f0a 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
+            "radial-gradient(circle, #ff9f0a 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
         }}
       />
 
-      {/* Orange radial glow bottom-left */}
-      <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl pointer-events-none" />
-      {/* Orange radial glow top-right */}
-      <div className="absolute -top-40 -right-20 w-[400px] h-[400px] bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+      {/* Scanlines on hero only */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)",
+        }}
+      />
 
-      <div className="max-w-7xl mx-auto px-6 w-full pt-24 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      {/* Glows */}
+      <div className="absolute -bottom-60 -left-60 w-[600px] h-[600px] bg-accent/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-60 -right-40 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/4 w-[300px] h-[300px] bg-accent/3 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Left — Text content */}
-          <div className="relative z-10">
+      <div className="max-w-7xl mx-auto px-6 w-full pt-28 pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-16 items-center min-h-[80vh]">
 
-            {/* Badge */}
-            <div ref={badgeRef} className="opacity-0 mb-6">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-bg-secondary border border-accent/30 rounded text-xs font-mono text-accent">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                Available for work
-              </span>
-            </div>
+          {/* ── Left — Text ── */}
+          <div className="relative z-10 flex flex-col justify-center">
+
+            {/* Eyebrow label */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="flex items-center gap-3 mb-8"
+            >
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-bg-secondary border border-accent/25 rounded-full">
+                <div className="relative">
+                  <div className="w-2 h-2 rounded-full bg-green-400" />
+                  <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-60" />
+                </div>
+                <span className="text-xs font-mono text-text-secondary">
+                  Open to work
+                </span>
+              </div>
+              <div className="h-px flex-1 bg-gradient-to-r from-accent/40 to-transparent max-w-[80px]" />
+            </motion.div>
 
             {/* Headline */}
-            <div ref={headlineRef} className="mb-6 overflow-hidden">
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-5xl md:text-6xl xl:text-7xl font-bold leading-none">
-                <span className="word opacity-0 block text-text-primary">
+            <div ref={headlineRef} className="mb-7 overflow-hidden space-y-1">
+              <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2 text-5xl md:text-6xl xl:text-[72px] font-bold leading-[1.0] tracking-tight">
+                <span className="word opacity-0 text-text-primary">
                   Building
                 </span>
-                <span className="word opacity-0 block text-stroke">
+                <span
+                  className="word opacity-0"
+                  style={{
+                    WebkitTextStroke: "2px #ff9f0a",
+                    color: "transparent",
+                  }}
+                >
                   Digital
                 </span>
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-5xl md:text-6xl xl:text-7xl font-bold leading-none mt-2">
-                <span className="word opacity-0 block text-text-primary">
+              <div className="text-5xl md:text-6xl xl:text-[72px] font-bold leading-[1.0] tracking-tight">
+                <span className="word opacity-0 text-text-primary">
                   Experiences
                 </span>
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-5xl md:text-6xl xl:text-7xl font-bold leading-none mt-2">
-                <span className="word opacity-0 block text-text-primary">
+              <div className="flex flex-wrap items-baseline gap-x-4 text-5xl md:text-6xl xl:text-[72px] font-bold leading-[1.0] tracking-tight">
+                <span className="word opacity-0 text-text-primary">
                   That
                 </span>
-                <span className="word opacity-0 block text-accent">
+                <span className="word opacity-0 text-accent">
                   Stick.
                 </span>
               </div>
@@ -106,57 +135,61 @@ export default function Hero() {
             {/* Subtitle */}
             <p
               ref={subtitleRef}
-              className="opacity-0 text-text-secondary text-lg max-w-md leading-relaxed mb-8"
+              className="opacity-0 text-text-secondary text-base md:text-lg max-w-[420px] leading-relaxed mb-10"
             >
               Hey, I&apos;m{" "}
-              <span className="text-accent font-semibold">Rishabh Tiwari</span>{" "}
-              — a full-stack developer who crafts fast, scalable and beautiful
+              <span className="text-text-primary font-semibold">
+                Rishabh Tiwari
+              </span>{" "}
+              — a full-stack developer crafting fast, scalable and beautiful
               web applications.
             </p>
 
             {/* CTAs */}
-            <div ref={ctaRef} className="flex flex-wrap gap-4 items-center">
+            <div
+              ref={ctaRef}
+              className="flex flex-wrap gap-4 items-center mb-14"
+            >
               <motion.button
-                whileHover={{ scale: 1.04 }}
+                whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.96 }}
-                onClick={() =>
-                  document
-                    .querySelector("#projects")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                className="flex items-center gap-2 px-6 py-3 bg-accent text-bg-primary font-semibold rounded hover:bg-accent-light transition-colors duration-200 glow-orange-sm"
+                onClick={() => scrollTo("#projects")}
+                className="group flex items-center gap-2.5 px-7 py-3.5 bg-accent text-bg-primary font-semibold rounded-lg hover:bg-accent-light transition-all duration-200"
+                style={{ boxShadow: "0 0 24px rgba(255,159,10,0.25)" }}
               >
                 View My Work
-                <ArrowRight size={16} />
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform duration-200"
+                />
               </motion.button>
 
               <motion.button
-                whileHover={{ scale: 1.04 }}
+                whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.96 }}
-                onClick={() =>
-                  document
-                    .querySelector("#contact")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                className="flex items-center gap-2 px-6 py-3 border border-bg-tertiary text-text-secondary font-medium rounded hover:border-accent hover:text-accent transition-all duration-200"
+                onClick={() => scrollTo("#contact")}
+                className="flex items-center gap-2.5 px-7 py-3.5 border border-bg-tertiary text-text-secondary font-medium rounded-lg hover:border-accent hover:text-accent transition-all duration-200"
               >
-                <Play size={14} className="fill-current" />
-                Contact Me
+                <Mail size={15} />
+                Get in Touch
               </motion.button>
             </div>
 
-            {/* Stats row */}
-            <div className="flex gap-8 mt-12 pt-8 border-t border-bg-tertiary">
+            {/* Stats */}
+            <div
+              ref={statsRef}
+              className="flex gap-10 pt-8 border-t border-bg-tertiary/60"
+            >
               {[
-                { value: "2+", label: "Years coding" },
-                { value: "20+", label: "Projects built" },
-                { value: "∞", label: "Bugs squashed" },
+                { value: "2+",  label: "Years coding",    suffix: "" },
+                { value: "20+", label: "Projects shipped", suffix: "" },
+                { value: "∞",   label: "Bugs squashed",   suffix: "" },
               ].map((stat) => (
-                <div key={stat.label}>
-                  <div className="text-2xl font-bold text-accent font-mono">
+                <div key={stat.label} className="stat-item opacity-0">
+                  <div className="text-2xl font-bold text-accent font-mono leading-none">
                     {stat.value}
                   </div>
-                  <div className="text-xs text-text-muted mt-0.5">
+                  <div className="text-xs text-text-muted mt-1.5 font-mono">
                     {stat.label}
                   </div>
                 </div>
@@ -164,60 +197,23 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Right — 3D Device */}
+          {/* ── Right — 3D Model ── */}
           <motion.div
-            initial={{ opacity: 0, x: 60 }}
+            initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.9, delay: 0.4, ease: "easeOut" }}
-            className="flex justify-center items-center relative"
+            transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="relative flex justify-center items-center"
           >
-            {/* Floating stat badge */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1.2, duration: 0.5 }}
-              className="absolute top-0 right-0 md:right-10 bg-bg-secondary border border-accent/40 rounded-lg px-4 py-3 glow-orange-sm z-10"
-            >
-              <div className="text-accent font-bold text-xl font-mono">132%</div>
-              <div className="text-text-muted text-xs">Growth mindset</div>
-            </motion.div>
-
             <FloatingDevice />
-
-            {/* Tech ring label */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2"
-            >
-              {["React", "Node", "Next"].map((t) => (
-                <span
-                  key={t}
-                  className="text-[10px] font-mono px-2 py-0.5 bg-bg-secondary border border-bg-tertiary text-text-muted rounded"
-                >
-                  {t}
-                </span>
-              ))}
-            </motion.div>
           </motion.div>
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-      >
-        <span className="text-text-muted text-xs font-mono">scroll down</span>
-        <motion.div
-          animate={{ y: [0, 6, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="w-px h-8 bg-gradient-to-b from-accent to-transparent"
-        />
-      </motion.div>
+      {/* Corner accent lines */}
+      <div className="absolute bottom-0 left-0 w-24 h-px bg-gradient-to-r from-accent/40 to-transparent" />
+      <div className="absolute bottom-0 left-0 w-px h-24 bg-gradient-to-t from-accent/40 to-transparent" />
+      <div className="absolute top-0 right-0 w-24 h-px bg-gradient-to-l from-accent/40 to-transparent" />
+      <div className="absolute top-0 right-0 w-px h-24 bg-gradient-to-b from-accent/40 to-transparent" />
     </section>
   );
 }

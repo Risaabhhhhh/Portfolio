@@ -2,7 +2,7 @@ export const projects = [
   {
     id: 1,
     title: "DevConnect",
-    description: "A real-time developer collaboration platform with live code editor and video chat.",
+    description: "Real-time developer collaboration with live code editor, WebRTC video chat and instant messaging.",
     tags: ["Next.js", "Socket.io", "PostgreSQL", "WebRTC"],
     github: "https://github.com",
     live: "https://example.com",
@@ -11,7 +11,7 @@ export const projects = [
   {
     id: 2,
     title: "PixelStore",
-    description: "Full-stack e-commerce app with Stripe payments, inventory management and admin dashboard.",
+    description: "Full-stack e-commerce with Stripe payments, inventory management and a real-time admin dashboard.",
     tags: ["React", "Node.js", "Stripe", "MongoDB"],
     github: "https://github.com",
     live: "https://example.com",
@@ -20,7 +20,7 @@ export const projects = [
   {
     id: 3,
     title: "AuraAI",
-    description: "AI-powered mood tracker that analyzes journal entries and visualizes emotional patterns.",
+    description: "AI mood tracker that analyzes journal entries using GPT and visualizes emotional patterns over time.",
     tags: ["Python", "FastAPI", "OpenAI", "React"],
     github: "https://github.com",
     live: "https://example.com",
@@ -29,7 +29,7 @@ export const projects = [
   {
     id: 4,
     title: "CodeVault",
-    description: "A personal snippet manager with syntax highlighting, tagging and search.",
+    description: "Personal snippet manager with syntax highlighting, smart tagging, full-text search and dark mode.",
     tags: ["Next.js", "Prisma", "SQLite", "Tailwind"],
     github: "https://github.com",
     live: "https://example.com",
