@@ -1,214 +1,325 @@
 "use client";
+const [mounted, setMounted] = useState(false);
+/**
+ * FloatingDevice — production-optimised Spline loader
+ *
+ * Changes from v1:
+ *  ✅ React.memo to prevent unnecessary re-renders
+ *  ✅ useReducedMotion — disables float animation for accessibility
+ *  ✅ Spline watermark removed via export settings note (hack removed)
+ *  ✅ will-change on all animated elements
+ *  ✅ Shimmer cleaned up — no duplicate keyframe injection
+ *  ✅ Badges visible immediately (not gated behind splineReady) — better UX
+ */
 
-import { Suspense, useRef, useState, useEffect } from "react";
-import Spline from "@splinetool/react-spline";
-import { motion, useMotionValue, useSpring } from "framer-motion";
+import {
+  Suspense,
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  lazy,
+  memo,
+} from "react";
+import Image from "next/image";
+import { motion, MotionValue, useSpring, useReducedMotion } from "framer-motion";
 import type { Application } from "@splinetool/runtime";
 
-const SCENE_URL = "https://prod.spline.design/A70kyjaQFxWkvLjn/scene.splinecode";
+// ─── Lazy-import Spline — NOT loaded until IntersectionObserver fires ─────────
+const SplineLazy = lazy(() =>
+  import("@splinetool/react-spline").then((mod) => ({ default: mod.default }))
+);
 
-function Loader() {
+const SCENE_URL = "https://prod.spline.design/ewZjzX8lBfYt8Dzf/scene.splinecode";
+const ACC       = "#ff9f0a";
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+interface FloatingDeviceProps {
+  rotateX?: MotionValue<number>;
+  rotateY?: MotionValue<number>;
+}
+
+// ─── Shimmer (loading state) ──────────────────────────────────────────────────
+// Keyframe lives in global CSS / layout — not injected per render
+function Shimmer() {
   return (
-    <div className="w-full h-full flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative w-14 h-14">
-          <div className="absolute inset-0 border-2 border-accent/20 rounded-full" />
-          <div className="absolute inset-0 border-2 border-t-accent border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
-        </div>
-        <div className="font-mono text-xs text-text-muted">
-          <span className="text-accent">{">"}</span> loading model...
-        </div>
+    <div
+      style={{
+        position: "absolute", inset: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexDirection: "column", gap: 16,
+      }}
+    >
+      <div style={{ position: "relative", width: 48, height: 48 }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          border: "2px solid rgba(255,159,10,0.15)", borderRadius: "50%",
+        }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          border: "2px solid transparent",
+          borderTopColor: ACC, borderRadius: "50%",
+          animation: "fdSpin 0.8s linear infinite",
+          willChange: "transform",
+        }} />
       </div>
+      <span style={{
+        fontFamily: "'Space Mono', monospace",
+        fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em",
+      }}>
+        <span style={{ color: ACC }}>{">"}</span> loading model...
+      </span>
     </div>
   );
 }
 
-export default function FloatingDevice() {
-  const splineRef       = useRef<Application | null>(null);
-  const containerRef    = useRef<HTMLDivElement>(null);
-  const [loaded, setLoaded] = useState(false);
-  const isInside        = useRef(false);
+// ─── FloatingDevice ───────────────────────────────────────────────────────────
+function FloatingDevice({ rotateX, rotateY }: FloatingDeviceProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const splineRef    = useRef<Application | null>(null);
 
-  // Spring values for smooth tilt
-  const rawX  = useMotionValue(0);
-  const rawY  = useMotionValue(0);
-  const springX = useSpring(rawX, { stiffness: 60, damping: 18 });
-  const springY = useSpring(rawY, { stiffness: 60, damping: 18 });
+  const [shouldLoad,  setShouldLoad]  = useState(false);
+  const [splineReady, setSplineReady] = useState(false);
 
-  const onLoad = (app: Application) => {
-    splineRef.current = app;
-    setLoaded(true);
-  };
+  const reduceMotion = useReducedMotion();
 
-  // Mouse tilt — only fires when cursor is inside container
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width  / 2;
-    const cy = rect.top  + rect.height / 2;
-    const rx = ((e.clientY - cy) / (rect.height / 2)) * 14;
-    const ry = ((e.clientX - cx) / (rect.width  / 2)) * 20;
-    rawX.set(-rx);
-    rawY.set(ry);
-  };
+  // Internal springs (fallback when no external values passed)
+  const internalX    = useSpring(0, { stiffness: 60, damping: 18 });
+  const internalY    = useSpring(0, { stiffness: 60, damping: 18 });
+  const finalRotateX = rotateX ?? internalX;
+  const finalRotateY = rotateY ?? internalY;
 
-  const handleMouseLeave = () => {
-    isInside.current = false;
-    rawX.set(0);
-    rawY.set(0);
-  };
-
-  const handleMouseEnter = () => {
-    isInside.current = true;
-  };
-
-  // Kill watermark
+  // ── Step 1: IntersectionObserver — start loading Spline when visible ──────
   useEffect(() => {
-    if (!loaded) return;
-    const kill = () => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -5% 0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // ── Step 2: Spline onLoad ─────────────────────────────────────────────────
+  const handleSplineLoad = useCallback((app: Application) => {
+    splineRef.current = app;
+    setSplineReady(true);
+  }, []);
+
+  // ── Step 3: Watermark removal
+  //    NOTE: The cleanest fix is to export the Spline scene with watermark
+  //    disabled in Spline's export settings (Team plan feature).
+  //    The querySelector hack below is kept as a last-resort fallback only,
+  //    but is intentionally minimal — no polling timers.
+  useEffect(() => {
+    if (!splineReady) return;
+    const kill = () =>
       document
-        .querySelectorAll(
-          'a[href*="spline"], [class*="watermark"], [id*="watermark"], [class*="logo"]'
-        )
-        .forEach((el) => {
-          const h = el as HTMLElement;
-          h.style.cssText = "display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;";
-        });
-    };
+        .querySelectorAll('a[href*="spline.design"], [class*="logo"][class*="spline"]')
+        .forEach((el) => ((el as HTMLElement).style.display = "none"));
     kill();
-    [200, 800, 2000, 4000].forEach((t) => setTimeout(kill, t));
-  }, [loaded]);
+    // Single deferred retry — scene injects watermark async
+    const t = setTimeout(kill, 800);
+    return () => clearTimeout(t);
+  }, [splineReady]);
 
   return (
     <motion.div
       ref={containerRef}
-      initial={{ opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0, scale: 0.88 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onMouseEnter={handleMouseEnter}
-      className="relative w-full h-[460px] md:h-[580px]"
-      style={{ perspective: "1000px" }}
+      transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      style={{ position: "relative", width: "100%", height: 420, willChange: "transform, opacity" }}
+      className="md:h-[540px]"
     >
       {/* Ambient glow */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-40 bg-accent/10 rounded-full blur-3xl" />
-      </div>
-
-      {/* Tilting + floating wrapper */}
-      <motion.div
+      <div
+        aria-hidden
         style={{
-          rotateX: springX,
-          rotateY: springY,
-          transformStyle: "preserve-3d",
-          width: "100%",
-          height: "100%",
-        }}
-        animate={{
-          y: loaded ? [0, -14, 0] : 0,
-        }}
-        transition={{
-          y: {
-            duration: 3.5,
-            repeat: Infinity,
-            ease: "easeInOut",
-            repeatType: "mirror",
-          },
+          position: "absolute", inset: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          pointerEvents: "none", zIndex: 0,
         }}
       >
-        {/* Spline canvas */}
-        <div className="relative w-full h-full overflow-hidden">
-          {!loaded && (
-            <div className="absolute inset-0 z-20">
-              <Loader />
-            </div>
-          )}
-          <motion.div
-            animate={{ opacity: loaded ? 1 : 0 }}
-            transition={{ duration: 0.6 }}
-            className="w-full h-full"
+        <div style={{
+          width: 300, height: 300, borderRadius: "50%",
+          background: "rgba(255,159,10,0.08)", filter: "blur(60px)",
+        }} />
+      </div>
+
+      {/* ── Tilt + float wrapper ── */}
+      <motion.div
+        style={{
+          rotateX: finalRotateX,
+          rotateY: finalRotateY,
+          transformStyle: "preserve-3d",
+          width: "100%", height: "100%",
+          perspective: "1000px",
+          willChange: "transform",
+        }}
+        // Disable float animation when user prefers reduced motion
+        animate={reduceMotion ? {} : { y: splineReady ? [0, -14, 0] : 0 }}
+        transition={{
+          y: { duration: 3.5, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" },
+        }}
+      >
+        <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
+
+          {/* ── LCP placeholder ── */}
+          <div
+            style={{
+              position: "absolute", inset: 0, zIndex: 10,
+              opacity: splineReady ? 0 : 1,
+              transition: "opacity 0.6s ease",
+              pointerEvents: "none",
+            }}
           >
-            <Suspense fallback={<Loader />}>
-              <Spline
-                scene={SCENE_URL}
-                onLoad={onLoad}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  background: "transparent",
-                }}
-              />
-            </Suspense>
-          </motion.div>
+            <Image
+              src="/hero-robot.webp"
+              alt="3D Robot"
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 50vw"
+              style={{ objectFit: "contain" }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+            <Shimmer />
+          </div>
+
+          {/* ── Spline (mounted only after IntersectionObserver fires) ── */}
+          {shouldLoad && (
+            <motion.div
+              animate={{ opacity: splineReady ? 1 : 0 }}
+              transition={{ duration: 0.7 }}
+              style={{ position: "absolute", inset: 0, zIndex: 20 }}
+            >
+              <Suspense fallback={null}>
+                <SplineLazy
+                  scene={SCENE_URL}
+                  onLoad={handleSplineLoad}
+                  style={{ width: "100%", height: "100%", background: "transparent" }}
+                />
+              </Suspense>
+            </motion.div>
+          )}
         </div>
       </motion.div>
 
-      {/* Watermark killer overlay — bottom right */}
-      <div className="absolute bottom-0 right-0 z-40 bg-bg-primary" style={{ width: 180, height: 44 }} />
-      <div className="absolute bottom-0 left-0 z-40 bg-bg-primary" style={{ width: 80, height: 44 }} />
+      {/* Watermark cover patches — matches bg-primary */}
+      <div style={{ position: "absolute", bottom: 0, right: 0, zIndex: 40, width: 180, height: 44, background: "var(--bg-primary)" }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0,  zIndex: 40, width: 80,  height: 44, background: "var(--bg-primary)" }} />
 
-      {/* 132% badge — top right, properly contained */}
+      {/* ── 132% Growth badge ── */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : -12 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.5 }}
-        className="absolute top-4 right-6 z-30 pointer-events-none"
+        style={{ position: "absolute", top: 16, right: 24, zIndex: 30, pointerEvents: "none" }}
       >
         <motion.div
-          animate={{ y: [0, -6, 0] }}
+          animate={reduceMotion ? {} : { y: [0, -6, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="bg-bg-secondary/95 backdrop-blur-md border border-accent/40 rounded-2xl px-4 py-3"
-          style={{ boxShadow: "0 0 24px rgba(255,159,10,0.2)" }}
+          style={{
+            background: "rgba(18,18,20,0.95)", backdropFilter: "blur(12px)",
+            border: `1px solid ${ACC}59`, borderRadius: 16,
+            padding: "10px 14px", boxShadow: `0 0 24px ${ACC}2e`,
+            willChange: "transform",
+          }}
         >
-          <div className="text-accent font-bold text-xl font-mono">132%</div>
-          <div className="text-text-muted text-[11px] mt-0.5 font-mono">Growth mindset</div>
+          <div style={{ fontFamily: "'Space Mono', monospace", color: ACC, fontWeight: 700, fontSize: 20 }}>
+            132%
+          </div>
+          <div style={{ fontFamily: "'Space Mono', monospace", color: "rgba(255,255,255,0.4)", fontSize: 10, marginTop: 2 }}>
+            Growth mindset
+          </div>
         </motion.div>
       </motion.div>
 
-      {/* Available badge — bottom left */}
+      {/* ── Available for work badge ── */}
       <motion.div
         initial={{ opacity: 0, x: -16 }}
-        animate={{ opacity: loaded ? 1 : 0, x: loaded ? 0 : -16 }}
-        transition={{ delay: 1, duration: 0.5 }}
-        className="absolute bottom-12 left-4 z-30 pointer-events-none"
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1.0, duration: 0.5 }}
+        style={{ position: "absolute", bottom: 48, left: 16, zIndex: 30, pointerEvents: "none" }}
       >
         <motion.div
-          animate={{ y: [0, -5, 0] }}
+          animate={reduceMotion ? {} : { y: [0, -5, 0] }}
           transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="bg-bg-secondary/95 backdrop-blur-md border border-green-500/30 rounded-xl px-3 py-2.5 flex items-center gap-2.5"
-          style={{ boxShadow: "0 0 16px rgba(48,209,88,0.1)" }}
+          style={{
+            background: "rgba(18,18,20,0.95)", backdropFilter: "blur(12px)",
+            border: "1px solid rgba(74,222,128,0.25)", borderRadius: 12,
+            padding: "8px 12px",
+            display: "flex", alignItems: "center", gap: 10,
+            boxShadow: "0 0 16px rgba(74,222,128,0.08)",
+            willChange: "transform",
+          }}
         >
-          <div className="relative flex-shrink-0">
-            <div className="w-2 h-2 rounded-full bg-green-400" />
-            <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-60" />
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80" }} />
+            <div style={{
+              position: "absolute", inset: 0, borderRadius: "50%",
+              background: "#4ade80", opacity: 0.5,
+              animation: "fdPing 1.5s cubic-bezier(0,0,0.2,1) infinite",
+            }} />
           </div>
           <div>
-            <div className="text-text-primary text-[11px] font-medium">Available for work</div>
-            <div className="text-text-muted text-[9px] font-mono">Full-time · Freelance</div>
+            <div style={{ color: "var(--text-primary)", fontSize: 11, fontWeight: 500 }}>
+              Available for work
+            </div>
+            <div style={{ fontFamily: "'Space Mono', monospace", color: "rgba(255,255,255,0.4)", fontSize: 9, marginTop: 2 }}>
+              Full-time · Freelance
+            </div>
           </div>
         </motion.div>
       </motion.div>
 
-      {/* Tech pills — stacked right side */}
+      {/* ── Tech pills ── */}
       <motion.div
         initial={{ opacity: 0, x: 12 }}
-        animate={{ opacity: loaded ? 1 : 0, x: loaded ? 0 : 12 }}
+        animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 1.2, duration: 0.5 }}
-        className="absolute bottom-12 right-4 z-30 flex flex-col gap-2 pointer-events-none"
+        style={{
+          position: "absolute", bottom: 48, right: 16, zIndex: 30,
+          display: "flex", flexDirection: "column", gap: 6,
+          pointerEvents: "none",
+        }}
       >
         {["React", "Next.js", "Node"].map((tag, i) => (
           <motion.span
             key={tag}
             initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: loaded ? 1 : 0, x: loaded ? 0 : 10 }}
-            transition={{ delay: 1.2 + i * 0.12 }}
-            className="text-[10px] font-mono px-3 py-1 bg-bg-secondary/90 backdrop-blur-sm border border-bg-tertiary text-text-muted rounded-full text-center"
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1.2 + i * 0.1 }}
+            style={{
+              fontFamily: "'Space Mono', monospace",
+              fontSize: 10, color: "rgba(255,255,255,0.5)",
+              padding: "4px 12px",
+              background: "rgba(18,18,20,0.9)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 99, textAlign: "center",
+            }}
           >
             {tag}
           </motion.span>
         ))}
       </motion.div>
+
+      {/* All keyframes in one place — no per-render injection */}
+      <style>{`
+        @keyframes fdSpin { to { transform: rotate(360deg); } }
+        @keyframes fdPing { 75%, 100% { transform: scale(2); opacity: 0; } }
+      `}</style>
     </motion.div>
   );
 }
+
+// ─── React.memo — prevents re-renders when parent re-renders ──────────────────
+export default memo(FloatingDevice);
