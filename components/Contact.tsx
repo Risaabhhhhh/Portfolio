@@ -8,7 +8,12 @@ import {
   Twitter, CheckCircle2, Loader2, Terminal, AlertCircle,
 } from "lucide-react";
 import PixelAvatar from "./PixelAvatar";
-
+import {
+  buildNotificationHtml,
+  buildNotificationText,
+  buildAutoReplyHtml,
+  buildAutoReplyText,
+} from "@/lib/email";
 const ACC = "#ff9f0a";
 
 // ── Zod schema ───────────────────────────────────────────────────────────────

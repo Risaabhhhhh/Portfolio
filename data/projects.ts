@@ -1,7 +1,7 @@
 export const projects = [
   {
     id: 1,
-    title: "DevConnect",
+    title: "bittu.dev",
     description: "Real-time developer collaboration with live code editor, WebRTC video chat and instant messaging.",
     tags: ["Next.js", "Socket.io", "PostgreSQL", "WebRTC"],
     github: "https://github.com",

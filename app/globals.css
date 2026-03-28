@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design tokens ───────────────────────────────────────────────────────────
+   Define --bg-primary here so the watermark cover patches in FloatingDevice
+   can use var(--bg-primary) and always match the body background.
+   Update this single value if you ever change the background color.
+────────────────────────────────────────────────────────────────────────────── */
+:root {
+  --bg-primary:    #1c1c1e;
+  --bg-secondary:  #242426;
+  --bg-tertiary:   #2c2c2e;
+  --text-primary:  #f2f2f7;
+  --text-secondary:#aeaeb2;
+  --text-muted:    #636366;
+  --accent:        #ff9f0a;
+  --accent-light:  #ffb340;
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
@@ -13,23 +30,24 @@ html {
 }
 
 body {
-  background-color: #1c1c1e;
-  color: #f2f2f7;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   overflow-x: hidden;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1c1c1e; }
-::-webkit-scrollbar-thumb { background: #ff9f0a; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #ffb340; }
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 6px; }
+::-webkit-scrollbar-track    { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb    { background: var(--accent); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-light); }
 
+/* ── Utilities ───────────────────────────────────────────────────────────── */
 .text-stroke {
-  -webkit-text-stroke: 2px #ff9f0a;
+  -webkit-text-stroke: 2px var(--accent);
   color: transparent;
 }
-
 .text-stroke-white {
-  -webkit-text-stroke: 1px #f2f2f7;
+  -webkit-text-stroke: 1px var(--text-primary);
   color: transparent;
 }
 
@@ -48,43 +66,40 @@ body {
   z-index: 1;
 }
 
-.glow-orange {
-  box-shadow: 0 0 20px rgba(255, 159, 10, 0.3);
-}
+.glow-orange    { box-shadow: 0 0 20px rgba(255,159,10,0.3); }
+.glow-orange-sm { box-shadow: 0 0 10px rgba(255,159,10,0.2); }
 
-.glow-orange-sm {
-  box-shadow: 0 0 10px rgba(255, 159, 10, 0.2);
-}
-
+/* ── Spline canvas ───────────────────────────────────────────────────────── */
 spline-viewer {
   background: transparent !important;
 }
-
 spline-viewer::part(logo) {
   display: none !important;
 }
 
-#spline-watermark,
-[class*="spline-watermark"],
-canvas + div a {
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* Kill Spline watermark every possible way */
+/* ── Spline watermark — every known selector, maximum specificity ─────────
+   This CSS runs at the global level before JS kills it.
+   The JS in FloatingDevice.tsx then fires a deferred querySelector sweep
+   for anything that injects dynamically after React hydration.
+────────────────────────────────────────────────────────────────────────────── */
 a[href*="spline.design"],
+a[href*="app.spline.design"],
 [class*="spline-watermark"],
+[class*="SplineWatermark"],
 [id*="spline-watermark"],
 [class*="SplineLogo"],
 [class*="spline-logo"],
+[data-spline-watermark],
 canvas ~ div > a,
-canvas + div a {
+canvas + div a,
+canvas + div > div > a {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   width: 0 !important;
   height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  clip: rect(0 0 0 0) !important;
 }
-
