@@ -1,577 +1,586 @@
 "use client";
 
-import { useRef, memo } from "react";
-import { motion, useInView } from "framer-motion";
+import { useRef, useState, memo } from "react";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 
-// ── Design tokens — single source of truth ──────────────────────────────────
-// Change accent here and it flows everywhere
-const TOKENS = {
-  acc: "var(--accent, #ff9f0a)",
-} as const;
+// ── Design Tokens ─────────────────────────────────────────────────────────────
+const ACC = "#ff9f0a";
 
-// ── Data ─────────────────────────────────────────────────────────────────────
-const CATEGORIES = [
+// ── Stack Data — proof-first, no fake percentages ────────────────────────────
+const STACKS = [
   {
     id: "frontend",
-    number: "01",
+    index: "01",
     label: "Frontend",
-    description: "Pixel-perfect interfaces",
+    tagline: "Where users form opinions in 50ms.",
+    stance:
+      "I obsess over render budgets, motion curves, and the 8px grid. If it ships with a layout shift, I lose sleep.",
     color: "#ff9f0a",
-    twText: "text-[#ff9f0a]",
-    twBg: "bg-[#ff9f0a]/[0.08]",
-    twBorder: "border-[#ff9f0a]/20",
-    twHoverBorder: "group-hover:border-[#ff9f0a]/40",
-    twGlow: "group-hover:shadow-[0_0_40px_#ff9f0a14,0_20px_60px_rgba(0,0,0,0.3)]",
-    skills: [
-      { name: "React",         icon: "⚛",  level: 90 },
-      { name: "Next.js",       icon: "▲",  level: 88 },
-      { name: "TypeScript",    icon: "TS", level: 82 },
-      { name: "Tailwind CSS",  icon: "TW", level: 90 },
-      { name: "Framer Motion", icon: "FM", level: 75 },
-      { name: "HTML5 / CSS3",  icon: "H5", level: 93 },
+    dim: "#ff9f0a22",
+    proof: [
+      "Built 3 SSR apps with Next.js App Router — zero hydration errors in prod",
+      "Animated complex UIs with Framer Motion + GSAP without janking the main thread",
+      "Maintained 95+ Lighthouse scores across client projects under real network conditions",
+    ],
+    tools: [
+      { name: "React",         tag: "daily driver",   note: "hooks, context, compound patterns" },
+      { name: "Next.js",       tag: "production",     note: "App Router, RSC, ISR" },
+      { name: "TypeScript",    tag: "always on",      note: "strict mode, generics, inference" },
+      { name: "Tailwind CSS",  tag: "daily driver",   note: "design systems, dark mode" },
+      { name: "Framer Motion", tag: "animation",      note: "layout animations, gestures" },
+      { name: "GSAP",          tag: "animation",      note: "scroll timelines, 3D" },
     ],
   },
   {
     id: "backend",
-    number: "02",
+    index: "02",
     label: "Backend",
-    description: "Scalable server systems",
+    tagline: "APIs should be boring. Infrastructure should be invisible.",
+    stance:
+      "I design endpoints that are obvious to consume and hard to misuse. Caching, rate-limiting, and DB indexing aren't afterthoughts.",
     color: "#34d399",
-    twText: "text-[#34d399]",
-    twBg: "bg-[#34d399]/[0.08]",
-    twBorder: "border-[#34d399]/20",
-    twHoverBorder: "group-hover:border-[#34d399]/40",
-    twGlow: "group-hover:shadow-[0_0_40px_#34d39914,0_20px_60px_rgba(0,0,0,0.3)]",
-    skills: [
-      { name: "Node.js",    icon: "No", level: 85 },
-      { name: "Express",    icon: "Ex", level: 83 },
-      { name: "Python",     icon: "Py", level: 80 },
-      { name: "FastAPI",    icon: "FA", level: 75 },
-      { name: "PostgreSQL", icon: "PG", level: 78 },
-      { name: "MongoDB",    icon: "Mg", level: 80 },
+    dim: "#34d39922",
+    proof: [
+      "Designed a token-based queue system for a teleconsultation platform (Medicare Hub)",
+      "Implemented Upstash Redis rate-limiting + Resend transactional email on a prod contact API",
+      "Built role-based REST APIs in Express — hospital admin, doctor, and patient roles with JWT auth",
+    ],
+    tools: [
+      { name: "Node.js",    tag: "daily driver",   note: "event loop, streams, clustering" },
+      { name: "Express",    tag: "production",     note: "middleware, REST, error handling" },
+      { name: "Python",     tag: "scripting",      note: "automation, data pipelines" },
+      { name: "FastAPI",    tag: "exploring",      note: "async, Pydantic, OpenAPI" },
+      { name: "PostgreSQL", tag: "production",     note: "relations, indexes, transactions" },
+      { name: "MongoDB",    tag: "production",     note: "aggregations, change streams" },
     ],
   },
   {
     id: "ml",
-    number: "03",
+    index: "03",
     label: "Data & ML",
-    description: "Exploring intelligence",
+    tagline: "Learning what the model can't tell you on the label.",
+    stance:
+      "I integrate AI into products — not as a party trick, but as a decision layer. Currently studying the internals I've been skipping.",
     color: "#c084fc",
-    twText: "text-[#c084fc]",
-    twBg: "bg-[#c084fc]/[0.08]",
-    twBorder: "border-[#c084fc]/20",
-    twHoverBorder: "group-hover:border-[#c084fc]/40",
-    twGlow: "group-hover:shadow-[0_0_40px_#c084fc14,0_20px_60px_rgba(0,0,0,0.3)]",
-    badge: "EXPLORING",
-    skills: [
-      { name: "NumPy",        icon: "Np", level: 72 },
-      { name: "Pandas",       icon: "Pd", level: 70 },
-      { name: "Scikit-learn", icon: "Sk", level: 60 },
-      { name: "TensorFlow",   icon: "TF", level: 50 },
-      { name: "Jupyter",      icon: "Jp", level: 75 },
-      { name: "Matplotlib",   icon: "Mt", level: 68 },
+    dim: "#c084fc22",
+    badge: "ACTIVELY EXPLORING",
+    proof: [
+      "Integrated Anthropic Claude API into a doctor dashboard for real-time patient AI assistance",
+      "Built data pipelines with Pandas for healthcare vitals normalization",
+      "Working through fast.ai Practical Deep Learning — implementing from scratch, not just calling APIs",
+    ],
+    tools: [
+      { name: "NumPy",        tag: "data",        note: "vectorized ops, broadcasting" },
+      { name: "Pandas",       tag: "data",        note: "ETL, reshaping, time series" },
+      { name: "Scikit-learn", tag: "learning",    note: "classification, pipelines" },
+      { name: "TensorFlow",   tag: "learning",    note: "sequential models, fine-tuning" },
+      { name: "Anthropic API",tag: "production",  note: "Claude, tool use, streaming" },
+      { name: "Jupyter",      tag: "daily",       note: "exploration, prototyping" },
     ],
   },
   {
-    id: "tools",
-    number: "04",
-    label: "Tools & DevOps",
-    description: "Ship & deploy",
+    id: "tooling",
+    index: "04",
+    label: "Tooling & DevOps",
+    tagline: "Ship fast. Don't break prod. Repeat.",
+    stance:
+      "I care about DX as much as UX. A slow dev loop kills momentum. A broken deployment pipeline kills trust.",
     color: "#60a5fa",
-    twText: "text-[#60a5fa]",
-    twBg: "bg-[#60a5fa]/[0.08]",
-    twBorder: "border-[#60a5fa]/20",
-    twHoverBorder: "group-hover:border-[#60a5fa]/40",
-    twGlow: "group-hover:shadow-[0_0_40px_#60a5fa14,0_20px_60px_rgba(0,0,0,0.3)]",
-    skills: [
-      { name: "Git",    icon: "Gt", level: 90 },
-      { name: "Docker", icon: "Dk", level: 72 },
-      { name: "AWS",    icon: "AW", level: 65 },
-      { name: "Figma",  icon: "Fi", level: 70 },
-      { name: "Vercel", icon: "Vc", level: 85 },
-      { name: "Linux",  icon: "Lx", level: 75 },
+    dim: "#60a5fa22",
+    proof: [
+      "Deployed full-stack apps on Vercel + Railway with zero-downtime preview environments",
+      "Containerised a Node/Postgres stack with Docker Compose for local dev parity",
+      "Automated repetitive tasks with Bash scripts — because clicking is slow",
+    ],
+    tools: [
+      { name: "Git",    tag: "daily driver",  note: "branching, rebase, CI hooks" },
+      { name: "Docker", tag: "production",    note: "compose, multi-stage builds" },
+      { name: "AWS",    tag: "exploring",     note: "S3, EC2, Lambda basics" },
+      { name: "Vercel", tag: "daily driver",  note: "preview deploys, edge functions" },
+      { name: "Figma",  tag: "design",        note: "component libraries, handoff" },
+      { name: "Linux",  tag: "daily driver",  note: "bash, cron, process management" },
     ],
   },
 ] as const;
 
-type Category = typeof CATEGORIES[number];
-type Skill    = Category["skills"][number];
+type Stack = typeof STACKS[number];
+type Tool  = Stack["tools"][number];
 
-const totalSkills = CATEGORIES.reduce((a, c) => a + c.skills.length, 0);
-
-// ── Shared animation variants ────────────────────────────────────────────────
-const fadeUp = {
-  hidden:  { opacity: 0, y: 24 },
-  visible: (delay = 0) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] as const },
-  }),
+// ── Tag colour map ─────────────────────────────────────────────────────────────
+const TAG_COLORS: Record<string, string> = {
+  "daily driver": "#ff9f0a",
+  production:     "#34d399",
+  animation:      "#fb7185",
+  "always on":    "#60a5fa",
+  exploring:      "#c084fc",
+  learning:       "#c084fc",
+  scripting:      "#60a5fa",
+  design:         "#f472b6",
+  data:           "#34d399",
+  daily:          "#ff9f0a",
 };
 
-// ── Radar / SkillWeb ─────────────────────────────────────────────────────────
-const SkillWeb = memo(function SkillWeb({
-  skills, color, revealed,
-}: {
-  skills: readonly Skill[];
-  color: string;
-  revealed: boolean;
-}) {
-  const SIZE = 120;
-  const cx   = SIZE / 2;
-  const cy   = SIZE / 2;
-  const maxR = SIZE / 2 - 10;
-  const n    = skills.length;
+const tagColor = (tag: string) => TAG_COLORS[tag] ?? "#888";
 
-  const angle = (i: number) => (Math.PI * 2 * i) / n - Math.PI / 2;
-  const pt    = (i: number, r: number) => ({
-    x: cx + Math.cos(angle(i)) * r,
-    y: cy + Math.sin(angle(i)) * r,
-  });
-
-  const polyPoints = skills
-    .map((s, i) => {
-      const { x, y } = pt(i, (s.level / 100) * maxR);
-      return `${x},${y}`;
-    })
-    .join(" ");
-
+// ── Tiny animated counter ──────────────────────────────────────────────────────
+const Counter = memo(function Counter({ value, color }: { value: number | string; color: string }) {
   return (
-    <svg
-      viewBox={`0 0 ${SIZE} ${SIZE}`}
-      width={SIZE}
-      height={SIZE}
-      role="img"
-      aria-label={`Radar chart showing skill levels for ${skills.map(s => s.name).join(", ")}`}
-      className="overflow-visible"
-    >
-      {/* Ring guides */}
-      {[0.25, 0.5, 0.75, 1].map((r, ri) => (
-        <polygon
-          key={ri}
-          points={skills.map((_, i) => { const p = pt(i, maxR * r); return `${p.x},${p.y}`; }).join(" ")}
-          fill="none"
-          stroke={`${color}18`}
-          strokeWidth={0.5}
-        />
-      ))}
-
-      {/* Spokes */}
-      {skills.map((_, i) => {
-        const outer = pt(i, maxR);
-        return <polyline key={i} points={`${cx},${cy} ${outer.x},${outer.y}`} stroke={`${color}18`} strokeWidth={0.5} fill="none" />;
-      })}
-
-      {/* Skill fill polygon */}
-      <motion.polygon
-        points={polyPoints}
-        fill={`${color}18`}
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: revealed ? 1 : 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        style={{ willChange: "opacity" }}
-      />
-
-      {/* Node dots */}
-      {skills.map((skill, i) => {
-        const pos = pt(i, (skill.level / 100) * maxR);
-        return (
-          <motion.circle
-            key={skill.name}
-            cx={pos.x}
-            cy={pos.y}
-            r={3}
-            fill={color}
-            initial={{ scale: 0 }}
-            animate={{ scale: revealed ? 1 : 0 }}
-            transition={{ delay: revealed ? i * 0.06 + 0.3 : 0, duration: 0.3 }}
-            style={{ transformOrigin: `${pos.x}px ${pos.y}px`, willChange: "transform" }}
-          />
-        );
-      })}
-    </svg>
+    <span className="font-mono font-bold text-2xl leading-none" style={{ color }}>
+      {value}
+    </span>
   );
 });
 
-// ── SkillRow — memoized, no DOM mutation ─────────────────────────────────────
-const SkillRow = memo(function SkillRow({
-  skill, color, twText, twBg, twBorder, cardDelay, index, isInView,
-}: {
-  skill: Skill;
-  color: string;
-  twText: string;
-  twBg: string;
-  twBorder: string;
-  cardDelay: number;
-  index: number;
-  isInView: boolean;
-}) {
+// ── Proof item ─────────────────────────────────────────────────────────────────
+const ProofItem = memo(function ProofItem({
+  text, color, delay, inView,
+}: { text: string; color: string; delay: number; inView: boolean }) {
+  return (
+    <motion.li
+      initial={{ opacity: 0, x: -12 }}
+      animate={inView ? { opacity: 1, x: 0 } : {}}
+      transition={{ duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] }}
+      className="flex gap-3 items-start"
+    >
+      <span
+        className="mt-[5px] w-[5px] h-[5px] rounded-full flex-shrink-0"
+        style={{ background: color, boxShadow: `0 0 6px ${color}` }}
+        aria-hidden
+      />
+      <span className="text-sm leading-relaxed" style={{ color: "var(--text-secondary, #a1a1aa)" }}>
+        {text}
+      </span>
+    </motion.li>
+  );
+});
+
+// ── Tool chip ─────────────────────────────────────────────────────────────────
+const ToolChip = memo(function ToolChip({
+  tool, delay, inView,
+}: { tool: Tool; delay: number; inView: boolean }) {
+  const tc = tagColor(tool.tag);
   return (
     <motion.div
-      initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
-      variants={fadeUp}
-      custom={cardDelay + index * 0.07 + 0.4}
-      role="listitem"
+      initial={{ opacity: 0, y: 10 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+      className="group relative rounded-xl px-3 py-2.5 border cursor-default transition-colors duration-200"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        borderColor: "rgba(255,255,255,0.07)",
+      }}
+      whileHover={{ borderColor: `${tc}55`, backgroundColor: `${tc}08` }}
     >
-      <div className="flex items-center gap-3 mb-1.5">
-        <motion.div
-          whileHover={{ scale: 1.2, rotate: 5 }}
-          aria-hidden="true"
-          className={[
-            "w-7 h-7 rounded-lg flex items-center justify-center",
-            "text-[10px] font-bold font-mono flex-shrink-0 border",
-            twBg, twBorder, twText,
-          ].join(" ")}
-          style={{ willChange: "transform" }}
-        >
-          {skill.icon}
-        </motion.div>
-
-        <div className="flex-1 flex items-center justify-between">
-          <span
-            className={[
-              "text-xs font-['DM_Sans'] transition-colors duration-200",
-              "text-[var(--text-secondary)]",
-              // Tailwind hover — no DOM mutation needed
-              `hover:${twText}`,
-            ].join(" ")}
-          >
-            {skill.name}
-          </span>
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ delay: cardDelay + index * 0.07 + 0.8 }}
-            aria-hidden="true"
-            className={`font-mono text-[10px] ${twText} opacity-60`}
-          >
-            {skill.level}%
-          </motion.span>
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      <div
-        className="ml-10 h-[2px] rounded-full overflow-hidden bg-white/5"
-        role="progressbar"
-        aria-valuenow={skill.level}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`${skill.name} proficiency: ${skill.level}%`}
-      >
-        <motion.div
-          initial={{ width: 0 }}
-          animate={isInView ? { width: `${skill.level}%` } : { width: 0 }}
-          transition={{
-            delay: cardDelay + index * 0.08 + 0.5,
-            duration: 1,
-            ease: [0.34, 1.2, 0.64, 1],
-          }}
-          className="h-full rounded-full"
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span className="text-xs font-semibold text-[var(--text-primary,#f5f5f5)] font-['DM_Sans']">
+          {tool.name}
+        </span>
+        <span
+          className="text-[9px] font-mono px-1.5 py-0.5 rounded-full"
           style={{
-            background: `linear-gradient(90deg, ${color}77, ${color})`,
-            boxShadow: `0 0 8px ${color}55`,
-            willChange: "width",
+            color: tc,
+            background: `${tc}18`,
+            border: `1px solid ${tc}30`,
           }}
-        />
+        >
+          {tool.tag}
+        </span>
       </div>
+      <p className="text-[10px] font-mono leading-relaxed" style={{ color: "var(--text-muted,#52525b)" }}>
+        {tool.note}
+      </p>
     </motion.div>
   );
 });
 
-// ── SkillCard — memoized group card ─────────────────────────────────────────
-const SkillCard = memo(function SkillCard({
-  cat, index, isInView,
-}: {
-  cat: Category;
-  index: number;
-  isInView: boolean;
-}) {
-  const cardDelay = index * 0.15;
-
+// ── Stack panel — expanded detail ────────────────────────────────────────────
+const StackPanel = memo(function StackPanel({
+  stack, inView,
+}: { stack: Stack; inView: boolean }) {
   return (
-    <motion.article
-      initial={{ opacity: 0, clipPath: "circle(0% at 50% 50%)" }}
-      animate={
-        isInView
-          ? { opacity: 1, clipPath: "circle(150% at 50% 50%)" }
-          : { opacity: 0, clipPath: "circle(0% at 50% 50%)" }
-      }
-      transition={{ duration: 0.8, delay: cardDelay, ease: [0.34, 1.2, 0.64, 1] }}
-      aria-label={`${cat.label} skills`}
-      className={[
-        "group relative rounded-2xl overflow-hidden cursor-default",
-        "bg-gradient-to-br from-[#1a1a1c] to-[#141416]",
-        "border transition-[border-color,box-shadow] duration-300",
-        "border-white/[0.055]",
-        cat.twHoverBorder,
-        cat.twGlow,
-      ].join(" ")}
-    >
-      {/* Top accent bar — scales in on reveal */}
+    <AnimatePresence>
       <motion.div
-        aria-hidden="true"
-        animate={{ scaleX: isInView ? 1 : 0 }}
-        initial={{ scaleX: 0 }}
-        transition={{ duration: 0.55, delay: cardDelay + 0.3, ease: "easeOut" }}
-        className="absolute top-0 left-0 right-0 h-[2px] origin-left"
-        style={{
-          background: `linear-gradient(to right, ${cat.color}, ${cat.color}44, transparent)`,
-        }}
-      />
+        key={stack.id}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="grid md:grid-cols-2 gap-8 mt-0"
+      >
+        {/* Left — stance + proof */}
+        <div>
+          <p
+            className="text-[13px] leading-relaxed font-['DM_Sans'] italic mb-5"
+            style={{
+              color: stack.color,
+              borderLeft: `2px solid ${stack.color}`,
+              paddingLeft: "12px",
+            }}
+          >
+            &ldquo;{stack.stance}&rdquo;
+          </p>
 
-      {/* Hover glow overlay */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{
-          background: `radial-gradient(ellipse at 30% 30%, ${cat.color}0c, transparent 60%)`,
-        }}
-      />
-
-      <div className="p-6">
-        {/* ── Card header ── */}
-        <div className="flex items-start justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div
-              aria-hidden="true"
-              className={[
-                "w-11 h-11 rounded-xl flex items-center justify-center",
-                "font-mono text-sm font-bold flex-shrink-0 border",
-                cat.twBg, cat.twBorder, cat.twText,
-              ].join(" ")}
-            >
-              {cat.number}
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <h3
-                  className={[
-                    "font-bold text-lg leading-none font-['Syne']",
-                    "text-[var(--text-primary)] transition-colors duration-200",
-                    `group-hover:${cat.twText}`,
-                  ].join(" ")}
-                >
-                  {cat.label}
-                </h3>
-                {"badge" in cat && cat.badge && (
-                  <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-full bg-[#c084fc]/12 border border-[#c084fc]/28 text-[#c084fc]">
-                    {cat.badge}
-                  </span>
-                )}
-              </div>
-              <p className={`text-[11px] font-mono mt-0.5 ${cat.twText} opacity-50`}>
-                {cat.description}
-              </p>
-            </div>
-          </div>
-
-          {/* Radar + count */}
-          <div className="flex flex-col items-end gap-1">
-            <SkillWeb
-              skills={cat.skills}
-              color={cat.color}
-              revealed={isInView}
-            />
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {cat.skills.length} tools
-            </span>
-          </div>
+          <h4
+            className="text-[10px] font-mono tracking-[0.15em] mb-3"
+            style={{ color: "var(--text-muted,#52525b)" }}
+          >
+            SHIPPED / BUILT
+          </h4>
+          <ul className="space-y-3">
+            {stack.proof.map((p, i) => (
+              <ProofItem
+                key={i}
+                text={p}
+                color={stack.color}
+                delay={0.05 + i * 0.08}
+                inView={inView}
+              />
+            ))}
+          </ul>
         </div>
 
-        {/* ── Skill rows ── */}
-        <div role="list" aria-label={`${cat.label} skill list`} className="space-y-3">
-          {cat.skills.map((skill, i) => (
-            <SkillRow
-              key={skill.name}
-              skill={skill}
-              color={cat.color}
-              twText={cat.twText}
-              twBg={cat.twBg}
-              twBorder={cat.twBorder}
-              cardDelay={cardDelay}
-              index={i}
-              isInView={isInView}
-            />
-          ))}
+        {/* Right — tool chips */}
+        <div>
+          <h4
+            className="text-[10px] font-mono tracking-[0.15em] mb-3"
+            style={{ color: "var(--text-muted,#52525b)" }}
+          >
+            TOOLS IN CONTEXT
+          </h4>
+          <div className="grid grid-cols-2 gap-2">
+            {stack.tools.map((tool, i) => (
+              <ToolChip
+                key={tool.name}
+                tool={tool}
+                delay={i * 0.06}
+                inView={inView}
+              />
+            ))}
+          </div>
         </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
 
-        {/* ── Hover dots hint ── */}
-        <div
-          aria-hidden="true"
-          className="absolute bottom-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+// ── Stack row (accordion tab) ─────────────────────────────────────────────────
+const StackRow = memo(function StackRow({
+  stack, index, isOpen, onClick, inView,
+}: {
+  stack: Stack;
+  index: number;
+  isOpen: boolean;
+  onClick: () => void;
+  inView: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+      className="border-b last:border-b-0"
+      style={{ borderColor: "rgba(255,255,255,0.06)" }}
+    >
+      {/* Header row — clickable */}
+      <button
+        onClick={onClick}
+        aria-expanded={isOpen}
+        className="w-full text-left group flex items-center gap-5 py-6 focus-visible:outline-none"
+      >
+        {/* Index */}
+        <span
+          className="font-mono text-[11px] w-7 flex-shrink-0 transition-colors duration-200"
+          style={{ color: isOpen ? stack.color : "var(--text-muted,#52525b)" }}
         >
-          {[0, 1, 2].map(i => (
-            <motion.div
-              key={i}
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-              className="w-[3px] h-[3px] rounded-full"
-              style={{ background: cat.color }}
-            />
-          ))}
-        </div>
-      </div>
-    </motion.article>
+          {stack.index}
+        </span>
+
+        {/* Label */}
+        <span
+          className="font-['Syne'] font-bold text-2xl leading-none flex-1 transition-colors duration-200"
+          style={{ color: isOpen ? "var(--text-primary,#f5f5f5)" : "var(--text-secondary,#a1a1aa)" }}
+        >
+          {stack.label}
+          {"badge" in stack && stack.badge && (
+            <span
+              className="ml-3 text-[9px] font-mono px-2 py-1 rounded-full align-middle"
+              style={{
+                color: stack.color,
+                background: `${stack.color}15`,
+                border: `1px solid ${stack.color}30`,
+              }}
+            >
+              {stack.badge}
+            </span>
+          )}
+        </span>
+
+        {/* Tagline — hide when open */}
+        <span
+          className="hidden sm:block text-xs font-mono max-w-xs text-right transition-opacity duration-200"
+          style={{
+            color: "var(--text-muted,#52525b)",
+            opacity: isOpen ? 0 : 1,
+          }}
+        >
+          {stack.tagline}
+        </span>
+
+        {/* Expand indicator */}
+        <span
+          className="flex-shrink-0 w-7 h-7 rounded-full border flex items-center justify-center transition-all duration-300"
+          style={{
+            borderColor: isOpen ? stack.color : "rgba(255,255,255,0.1)",
+            background: isOpen ? `${stack.color}15` : "transparent",
+            color: isOpen ? stack.color : "var(--text-muted,#52525b)",
+          }}
+          aria-hidden
+        >
+          <motion.span
+            animate={{ rotate: isOpen ? 45 : 0 }}
+            transition={{ duration: 0.25 }}
+            className="text-lg leading-none font-light"
+          >
+            +
+          </motion.span>
+        </span>
+      </button>
+
+      {/* Expanded content */}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div
+              className="pb-8 pt-0 rounded-2xl mb-4 px-6 py-6"
+              style={{
+                background: `${stack.color}07`,
+                border: `1px solid ${stack.color}18`,
+              }}
+            >
+              <StackPanel stack={stack} inView={inView} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 });
 
 // ── Main Skills section ───────────────────────────────────────────────────────
 export default function Skills() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const gridRef    = useRef<HTMLDivElement>(null);
-  // One observer drives everything — heading + grid all use isInView
-  const isInView   = useInView(gridRef, { once: true, margin: "-80px" });
-  // Separate earlier trigger for the heading
-  const headingRef = useRef<HTMLDivElement>(null);
+  const [openId, setOpenId] = useState<string>("frontend");
+
+  const headingRef    = useRef<HTMLDivElement>(null);
   const headingInView = useInView(headingRef, { once: true, margin: "-60px" });
+  const bodyRef       = useRef<HTMLDivElement>(null);
+  const bodyInView    = useInView(bodyRef, { once: true, margin: "-80px" });
+
+  const totalTools = STACKS.reduce((a, s) => a + s.tools.length, 0);
 
   return (
     <section
-      ref={sectionRef}
       id="skills"
       aria-labelledby="skills-heading"
-      className="relative py-32 overflow-hidden bg-[var(--bg-secondary)]"
+      className="relative py-32 overflow-hidden"
+      style={{ background: "var(--bg-secondary, #141416)" }}
     >
-      {/* Dot grid */}
+      {/* ── Atmosphere ── */}
       <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none opacity-[0.022]"
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: `radial-gradient(circle, #ff9f0a 1px, transparent 1px)`,
-          backgroundSize: "40px 40px",
+          backgroundImage:
+            "linear-gradient(rgba(255,159,10,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,159,10,0.025) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
         }}
       />
-      {/* Glow blobs */}
-      <div aria-hidden="true" className="absolute top-0 right-0 pointer-events-none w-[500px] h-[500px] rounded-full bg-[#ff9f0a]/4 blur-[120px]" />
-      <div aria-hidden="true" className="absolute bottom-0 left-0 pointer-events-none w-[400px] h-[400px] rounded-full bg-[#c084fc]/[0.03] blur-[100px]" />
-      {/* Atmospheric diagonals */}
-      <div aria-hidden="true" className="absolute hidden lg:block top-[15%] right-[6%] w-px h-24 opacity-[0.12] rotate-[15deg]"
-        style={{ background: "linear-gradient(to bottom,transparent,#ff9f0a,transparent)" }} />
-      <div aria-hidden="true" className="absolute hidden lg:block bottom-[18%] left-[7%] w-px h-20 opacity-10 -rotate-[10deg]"
-        style={{ background: "linear-gradient(to bottom,transparent,#c084fc,transparent)" }} />
+      <div
+        aria-hidden
+        className="absolute top-0 right-0 pointer-events-none w-[600px] h-[600px] rounded-full blur-[160px]"
+        style={{ background: "rgba(255,159,10,0.04)" }}
+      />
+      <div
+        aria-hidden
+        className="absolute bottom-0 left-0 pointer-events-none w-[400px] h-[400px] rounded-full blur-[120px]"
+        style={{ background: "rgba(192,132,252,0.03)" }}
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+      {/* ── Vertical rule — decorative ── */}
+      <div
+        aria-hidden
+        className="absolute left-0 top-32 bottom-32 w-px hidden xl:block"
+        style={{
+          background: "linear-gradient(to bottom, transparent, rgba(255,159,10,0.15), transparent)",
+          marginLeft: "calc((100vw - 1280px) / 2 - 32px)",
+        }}
+      />
 
-        {/* ── Heading ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+
+        {/* ── Heading block ── */}
         <motion.div
           ref={headingRef}
-          initial="hidden"
-          animate={headingInView ? "visible" : "hidden"}
-          variants={fadeUp}
-          custom={0}
-          className="mb-16"
+          initial={{ opacity: 0, y: 24 }}
+          animate={headingInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-20"
         >
-          <div className="flex items-center gap-3 mb-4" aria-hidden="true">
-            <div className="w-8 h-[2px] bg-[#ff9f0a]" />
-            <span className="font-mono text-sm tracking-widest text-[#ff9f0a]">04. skills</span>
+          {/* Eyebrow */}
+          <div className="flex items-center gap-3 mb-6" aria-hidden>
+            <div className="w-6 h-px" style={{ background: ACC }} />
+            <span className="font-mono text-xs tracking-[0.2em]" style={{ color: ACC }}>
+              04. skills
+            </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5">
-            <div>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+            <div className="max-w-xl">
               <h2
                 id="skills-heading"
-                className="font-bold leading-tight"
-                style={{ fontSize: "clamp(36px,5vw,62px)" }}
+                className="font-['Syne'] font-black leading-[0.9] mb-5"
+                style={{ fontSize: "clamp(44px, 6vw, 80px)" }}
               >
-                <span className="text-[var(--text-primary)]">My </span>
-                <span style={{ WebkitTextStroke: "2px #ff9f0a", color: "transparent" }}>Toolbox</span>
+                <span style={{ color: "var(--text-primary,#f5f5f5)" }}>The </span>
+                <span
+                  style={{
+                    WebkitTextStroke: `2px ${ACC}`,
+                    color: "transparent",
+                  }}
+                >
+                  Stack
+                </span>
+                <br />
+                <span style={{ color: "var(--text-primary,#f5f5f5)" }}>Behind</span>
+                <span
+                  className="ml-4"
+                  style={{
+                    WebkitTextStroke: `2px ${ACC}`,
+                    color: "transparent",
+                  }}
+                >
+                  the Work
+                </span>
               </h2>
-              <p className="text-sm leading-relaxed mt-3 max-w-md text-[var(--text-secondary)]">
-                Technologies I work with daily — and ones I&apos;m actively exploring.
+              <p
+                className="text-sm leading-relaxed font-['DM_Sans'] max-w-sm"
+                style={{ color: "var(--text-secondary,#a1a1aa)" }}
+              >
+                Not a list of logos. Every tool here has a story — a project it was battle-tested on, a problem it helped solve.
               </p>
             </div>
 
-            {/* Stats counter */}
-            <div className="flex items-center gap-6 self-start sm:self-auto" aria-label="Skills summary">
-              {([
-                { value: totalSkills, label: "skills",     color: "#ff9f0a"  },
-                { value: 4,           label: "categories", color: "#34d399"  },
-                { value: "∞",         label: "learning",   color: "#c084fc"  },
-              ] as const).map(({ value, label, color }) => (
+            {/* Stats — right */}
+            <div
+              className="flex items-start gap-8 self-start lg:self-auto rounded-2xl px-6 py-5 border"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                borderColor: "rgba(255,255,255,0.06)",
+              }}
+              aria-label="Skills summary"
+            >
+              {[
+                { value: totalTools, label: "tools in use",  color: ACC         },
+                { value: 4,          label: "domains",       color: "#34d399"   },
+                { value: "3+",       label: "prod projects", color: "#60a5fa"   },
+              ].map(({ value, label, color }) => (
                 <div key={label} className="text-center">
+                  <Counter value={value} color={color} />
                   <div
-                    className="font-mono font-bold text-xl leading-none"
-                    aria-label={`${value} ${label}`}
-                    style={{ color }}
+                    className="font-mono text-[9px] mt-1 tracking-wider"
+                    style={{ color: "var(--text-muted,#52525b)" }}
                   >
-                    {value}
+                    {label}
                   </div>
-                  <div className="font-mono text-[10px] mt-1 text-[var(--text-muted)]">{label}</div>
                 </div>
               ))}
             </div>
           </div>
         </motion.div>
 
-        {/* ── 2×2 Card grid ── */}
+        {/* ── Accordion ── */}
         <div
-          ref={gridRef}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-5"
+          ref={bodyRef}
+          className="rounded-2xl border overflow-hidden"
+          style={{
+            background: "rgba(255,255,255,0.015)",
+            borderColor: "rgba(255,255,255,0.07)",
+          }}
           role="list"
-          aria-label="Skill categories"
+          aria-label="Skill domains"
         >
-          {CATEGORIES.map((cat, i) => (
-            <SkillCard
-              key={cat.id}
-              cat={cat}
-              index={i}
-              isInView={isInView}
-            />
-          ))}
+          <div className="px-6 sm:px-10">
+            {STACKS.map((stack, i) => (
+              <div key={stack.id} role="listitem">
+                <StackRow
+                  stack={stack}
+                  index={i}
+                  isOpen={openId === stack.id}
+                  onClick={() => setOpenId(prev => (prev === stack.id ? "" : stack.id))}
+                  inView={bodyInView}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* ── Bottom summary bar ── */}
+        {/* ── Footer bar ── */}
         <motion.div
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-          variants={fadeUp}
-          custom={0.9}
-          className="mt-8 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-5 bg-white/[0.03] border border-white/[0.06]"
+          initial={{ opacity: 0, y: 16 }}
+          animate={bodyInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 rounded-2xl border"
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            borderColor: "rgba(255,255,255,0.05)",
+          }}
         >
-          <div className="flex items-center gap-4">
-            <div className="flex gap-2" aria-hidden="true">
-              {CATEGORIES.map((cat, i) => (
+          {/* Pulse dots + caption */}
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1.5" aria-hidden>
+              {STACKS.map((s, i) => (
                 <motion.div
-                  key={cat.id}
-                  animate={{ scale: [1, 1.3, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
-                  className="w-2 h-2 rounded-full"
-                  style={{ background: cat.color, willChange: "transform" }}
+                  key={s.id}
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: i * 0.35 }}
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: s.color }}
                 />
               ))}
             </div>
-            <div>
-              <div className="text-sm font-semibold font-['DM_Sans'] text-[var(--text-primary)]">
-                Always learning
-              </div>
-              <div className="font-mono text-[10px] mt-0.5 text-[var(--text-muted)]">
-                New tools every week · Currently exploring ML
-              </div>
-            </div>
+            <span
+              className="text-xs font-['DM_Sans']"
+              style={{ color: "var(--text-muted,#52525b)" }}
+            >
+              Updated regularly as I ship new things
+            </span>
           </div>
 
-          {/* Tech tags — pure Tailwind hover, no DOM mutation */}
-          <div className="flex flex-wrap gap-2 justify-center sm:justify-end">
-            {(["React", "TypeScript", "Node.js", "Python", "Next.js"] as const).map((tech, i) => (
-              <motion.span
-                key={tech}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={isInView ? { opacity: 1, scale: 1 } : {}}
-                transition={{ delay: 1 + i * 0.07 }}
-                whileHover={{ scale: 1.08 }}
-                className="font-mono text-[11px] px-2.5 py-1 rounded-lg cursor-default transition-colors duration-200 bg-white/[0.04] border border-white/[0.07] text-[var(--text-muted)] hover:text-[#ff9f0a] hover:border-[#ff9f0a]/30 hover:bg-[#ff9f0a]/5"
-                style={{ willChange: "transform" }}
-              >
-                {tech}
-              </motion.span>
-            ))}
+          {/* Currently studying tag */}
+          <div
+            className="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-full border"
+            style={{
+              color: "#c084fc",
+              borderColor: "#c084fc30",
+              background: "#c084fc0e",
+            }}
+          >
+            <motion.div
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="w-1.5 h-1.5 rounded-full bg-[#c084fc]"
+              aria-hidden
+            />
+            Currently: Practical Deep Learning (fast.ai)
           </div>
         </motion.div>
+
       </div>
     </section>
   );
