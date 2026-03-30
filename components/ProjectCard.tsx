@@ -68,13 +68,11 @@ export default function ProjectCard({ project }: { project: Project }) {
         {/* Dynamic glow follow */}
         <motion.div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl"
-          style={{
-            background: useTransform(
-              [glowX, glowY],
-              ([gx, gy]) =>
-                `radial-gradient(circle at ${gx}% ${gy}%, rgba(255,159,10,0.08) 0%, transparent 60%)`
-            ),
-          }}
+   style={{
+  background: "linear-gradient(145deg, #1e1e20 0%, #161618 100%)",
+  border: "1px solid rgba(255,255,255,0.055)",
+  boxShadow: `0 10px 30px ${project.color}10`,
+}}
         />
 
         <div className="p-6" style={{ transform: "translateZ(20px)" }}>
