@@ -29,8 +29,8 @@ type FormErrors   = Partial<Record<keyof ContactForm, string>>;
 type SubmitStatus = "idle" | "sending" | "success" | "error" | "rate_limited";
 
 const SOCIALS = [
-  { icon: Github,   label: "GitHub",   href: "https://github.com",       hoverClass: "hover:text-white    hover:border-white/30    hover:bg-white/5" },
-  { icon: Linkedin, label: "LinkedIn", href: "https://linkedin.com",     hoverClass: "hover:text-blue-400 hover:border-blue-400/30 hover:bg-blue-400/5" },
+  { icon: Github,   label: "GitHub",   href: "https://github.com/Risaabhhhhh",       hoverClass: "hover:text-white    hover:border-white/30    hover:bg-white/5" },
+  { icon: Linkedin, label: "LinkedIn", href: "https://www.linkedin.com/in/rishabh-tiwari-96aa34265",     hoverClass: "hover:text-blue-400 hover:border-blue-400/30 hover:bg-blue-400/5" },
   { icon: Twitter,  label: "Twitter",  href: "https://twitter.com",      hoverClass: "hover:text-sky-400  hover:border-sky-400/30  hover:bg-sky-400/5" },
   { icon: Mail,     label: "Email",    href: "mailto:rishabh@email.com", hoverClass: "hover:text-[#ff9f0a] hover:border-[#ff9f0a]/30 hover:bg-[#ff9f0a]/5" },
 ] as const;

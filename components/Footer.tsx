@@ -15,8 +15,8 @@ const NAV_LINKS = [
 ];
 
 const SOCIALS = [
-  { icon: Github,   href: "https://github.com",       label: "GitHub",   color: "#f2f2f7" },
-  { icon: Linkedin, href: "https://linkedin.com",     label: "LinkedIn", color: "#60a5fa" },
+  { icon: Github,   href: "https://github.com/Risaabhhhhh",       label: "GitHub",   color: "#f2f2f7" },
+  { icon: Linkedin, href: "https://www.linkedin.com/in/rishabh-tiwari-96aa34265",     label: "LinkedIn", color: "#60a5fa" },
   { icon: Twitter,  href: "https://twitter.com",      label: "Twitter",  color: "#38bdf8" },
   { icon: Mail,     href: "mailto:rishabh@email.com", label: "Email",    color: ACC        },
 ];

@@ -122,22 +122,63 @@ function FloatingDevice() {
   }, [ready]);
 
   // Mobile placeholder — lightweight, zero WebGL, maintains layout space
-  if (isMobile) {
-    return (
-      <div className="relative h-[280px] w-full flex items-center justify-center">
-        <div
-          className="rounded-full"
-          style={{ width: 200, height: 200, background: `${ACC}10`, filter: "blur(40px)" }}
-        />
-        <div
-          className="absolute w-24 h-24 rounded-2xl border flex items-center justify-center"
-          style={{ borderColor: `${ACC}30`, background: `${ACC}08` }}
-        >
-          <span className="font-mono text-xs" style={{ color: ACC }}>RT.dev</span>
-        </div>
-      </div>
-    );
+const [isLowEnd, setIsLowEnd] = useState(false);
+
+useEffect(() => {
+  if (navigator.hardwareConcurrency <= 4) {
+    setIsLowEnd(true);
   }
+}, []);
+
+if (isMobile && isLowEnd) {
+  return (
+    <div className="relative h-[280px] w-full flex items-center justify-center">
+      <div
+        className="rounded-full"
+        style={{
+          width: 200,
+          height: 200,
+          background: `${ACC}10`,
+          filter: "blur(40px)",
+        }}
+      />
+      <div
+        className="absolute w-24 h-24 rounded-2xl border flex items-center justify-center"
+        style={{
+          borderColor: `${ACC}30`,
+          background: `${ACC}08`,
+        }}
+      >
+        <span className="font-mono text-xs" style={{ color: ACC }}>
+          RT.dev
+        </span>
+      </div>
+    </div>
+  );
+}
+
+useEffect(() => {
+  const el = containerRef.current;
+  if (!el) return;
+
+  if (isMobile) {
+    setShouldLoad(true); // 🔥 FORCE LOAD
+    return;
+  }
+
+  const obs = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        setShouldLoad(true);
+        obs.disconnect();
+      }
+    },
+    { threshold: 0.1 }
+  );
+
+  obs.observe(el);
+  return () => obs.disconnect();
+}, [isMobile]);
 
   return (
     <motion.div
@@ -176,11 +217,15 @@ function FloatingDevice() {
               className="absolute inset-0 z-10 pointer-events-auto"
             >
               <Suspense fallback={null}>
-                <SplineLazy
-                  scene={SCENE_URL}
-                  onLoad={handleLoad}
-                  style={{ width: "100%", height: "100%", background: "transparent" }}
-                />
+              <SplineLazy
+  scene={SCENE_URL}
+  onLoad={handleLoad}
+  style={{
+    width: "100%",
+    height: "100%",
+    transform: isMobile ? "scale(0.85)" : "scale(1)", // 👈 FIX
+  }}
+/>
               </Suspense>
             </motion.div>
           )}
